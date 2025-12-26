@@ -11,7 +11,7 @@ TARFILE = "3d-h5-sphere.tar.gz"
 INTERNAL_ROOT = "3d-h5-sphere"
 
 PSCRATCH = Path(os.environ["PSCRATCH"])
-DEST_DIR = PSCRATCH / "ebh" / "bondi-100"
+DEST_DIR = PSCRATCH / "mhd" / "bondi-100"
 
 def main():
     DEST_DIR.mkdir(parents=True, exist_ok=True)
