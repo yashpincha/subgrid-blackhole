@@ -6,12 +6,12 @@ import h5py
 class SphericalDataset(Dataset):
     FIELDS = ['bcc1', 'bcc2', 'bcc3', 'dens', 'eint', 'velx', 'vely', 'velz']
 
-    def __init__(self, pscratch_path, mode='train', train_ratio=0.8):
+    def __init__(self, pscratch_path, mode='train', train_ratio=0.8, normalize=True):
 
         self.pscratch_path = pscratch_path
         self.mode = mode
+        self.normalize = normalize
         self.train_ratio = train_ratio
-
         pattern = f"{self.pscratch_path}/mhd/3d-h5-sphere/*.h5"
         files = sorted(glob.glob(pattern))
         if not files:
@@ -60,11 +60,10 @@ class SphericalDataset(Dataset):
         return torch.stack(arrays)
 
     def __getitem__(self, idx):
-        return self.stack_tensor(self.files[idx])
-
+        return self.stack_tensor(self.files[idx]), self.stack_tensor(self.files[idx+1])
 
 if __name__ == '__main__':
-    dataset = SphericalDataset('/pscratch/sd/y/ypincha/', 'train')
+    dataset = SphericalDataset('/pscratch/sd/y/ypincha/', 'train', train_ratio = 1.0)
     global_mean, global_var = dataset.global_stats()
     stats_dict = {'mean': global_mean, 'var': global_var}
-    torch.save(stats_dict, 'stats.pt')
+    torch.save(stats_dict, f'stats.pt')
