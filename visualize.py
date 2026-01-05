@@ -11,16 +11,21 @@ FIELDS = [
     'eint', 'velx', 'vely', 'velz'
 ]
 
+
+def return_proj(phi, theta):
+    # data_3d is a tensor of shape [C, R, H, W]
+    lon = phi.numpy()*180/math.pi
+    lat = theta.numpy()*180/math.pi - 90.0
+    Lon, Lat = np.meshgrid(lon, lat)
+    proj = ccrs.Orthographic(central_longitude=0.0, central_latitude=20.0)
+    return Lon, Lat, proj 
+
 def plot_sphere(theta, phi, data_3d, channel_names,
                 r0=32, cmap='twilight_shifted',
                 vmin=None, vmax=None):
 
-    lon = phi.numpy()*180/math.pi
-    lat = theta.numpy() * 180/math.pi - 90.0
-    Lon, Lat = np.meshgrid(lon, lat)
-
+    Lon, Lat, proj = return_proj(phi, theta)
     fig = plt.figure(figsize=(20, 10))
-    proj = ccrs.Orthographic(central_longitude=0.0, central_latitude=20.0)
     for c in range(data_3d.shape[0]):
         ax = fig.add_subplot(2, 4, c+1, projection=proj)
 
@@ -46,10 +51,7 @@ def animate_radius_sweep(theta, phi, data_3d, channel_names, r_array, r_min=0, r
                          out_file='radius_sweep.gif', interval=300):
 
     # data_3d is a tensor of shape [C, R, H, W]
-    lon = phi.numpy() * 180 / math.pi
-    lat = theta.numpy() * 180 / math.pi - 90.0
-    Lon, Lat = np.meshgrid(lon, lat)
-    proj = ccrs.Orthographic(central_longitude=0.0, central_latitude=20.0)
+    Lon, Lat, proj = return_proj(phi, theta)
 
     fig = plt.figure(figsize=(20, 10))
 
