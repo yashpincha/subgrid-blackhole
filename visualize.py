@@ -32,13 +32,13 @@ def plot_sphere(theta, phi, data_3d, channel_names,
         )
 
         ax.set_global()
-        ax.set_title(channel_names[c], fontsize=12)
+        ax.set_title(channel_names[c])
+        kwargs = {'format': '%.3f'}
 
         cbar = fig.colorbar(im, ax=ax,orientation='horizontal',
-                    fraction=0.05, pad=0.05)
-
+                    fraction=0.05, pad=0.05, **kwargs)
         
-        cbar.set_label(f'{channel_names[c]} at r={r0}')
+        cbar.set_label(f'{channel_names[c]}')
 
     plt.savefig('all_fields.png', dpi=300)
 
