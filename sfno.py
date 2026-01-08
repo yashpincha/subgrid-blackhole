@@ -390,6 +390,16 @@ class SphericalFourierNeuralOperator(nn.Module):
         decoder_layers.append(fc)
         self.decoder = nn.Sequential(*decoder_layers)
 
+    @property
+    def device(self):
+        try:
+            return next(self.parameters()).device
+        except StopIteration:
+            try:
+                return next(self.buffers()).device
+            except StopIteration:
+                return torch.device('cpu')
+
     @torch.jit.ignore
     def no_weight_decay(self):
         return {"pos_embed", "cls_token"}
