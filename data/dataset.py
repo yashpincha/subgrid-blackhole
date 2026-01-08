@@ -98,8 +98,9 @@ class SphericalDataset(Dataset):
         return torch.stack(arrays)
 
     def __getitem__(self, idx):
-        return self.stack_tensor(self.files[idx]), self.stack_tensor(self.files[idx+1])
-    
+        u_n, u_np1 = self.stack_tensor(self.files[idx]), self.stack_tensor(self.files[idx+1])
+        return self.transform_to_spherical(u_n), self.transform_to_spherical(u_np1)
+
     def get_coords(self):
         with h5py.File(self.files[0], 'r') as f:
             coords_array = torch.stack([torch.tensor(f[coord][:], dtype=torch.float32)
