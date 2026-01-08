@@ -50,9 +50,8 @@ def plot_sphere(theta, phi, data_3d, channel_names,
 
     plt.savefig('all_fields.png', dpi=300)
 
-def plot_predictions(theta, phi, prediction, ground_truth, r_array,
-                                      plot_names, epoch, output_dir='plots',
-                                      radii_stride=8, cmap='viridis'):
+def plot_predictions(theta, phi, prediction, ground_truth, r_array, epoch, output_dir='plots',
+                                      radii_stride=8, cmap='viridis', plot_names=PLOT_NAMES):
     
     os.makedirs(output_dir, exist_ok=True)
     Lon, Lat, proj = return_proj(phi, theta)
@@ -67,7 +66,7 @@ def plot_predictions(theta, phi, prediction, ground_truth, r_array,
         r_value = r_array[r_idx].item()
 
         fig = plt.figure(figsize=(24, 32))
-        fig.suptitle(f'epoch {epoch}, radius = {r_value:.2f}', y=1.02)
+        fig.suptitle(f'epoch {epoch}, radius = {r_value:.2f}', y=1.01)
 
         for c in range(len(plot_names)):
 
@@ -89,7 +88,7 @@ def plot_predictions(theta, phi, prediction, ground_truth, r_array,
             ax_pred.set_global()
             ax_pred.set_title(f'{plot_names[c]} - prediction')
             cbar_pred = fig.colorbar(im_pred, ax=ax_pred, orientation='horizontal',
-                                     fraction=0.046, pad=0.04, format='%.1e')
+                                     fraction=0.046, pad=0.04, format='%.1f')
 
             ax_gt = fig.add_subplot(8, 3, c*3 + 2, projection=proj)
             im_gt = ax_gt.pcolormesh(Lon, Lat, gt_field,
@@ -99,7 +98,7 @@ def plot_predictions(theta, phi, prediction, ground_truth, r_array,
             ax_gt.set_global()
             ax_gt.set_title(f'{plot_names[c]} - ground truth')
             cbar_gt = fig.colorbar(im_gt, ax=ax_gt, orientation='horizontal',
-                                   fraction=0.046, pad=0.04, format='%.1e')
+                                   fraction=0.046, pad=0.04, format='%.1f')
 
             ax_err = fig.add_subplot(8, 3, c*3 + 3, projection=proj)
             im_err = ax_err.pcolormesh(Lon, Lat, error_field,
@@ -112,7 +111,7 @@ def plot_predictions(theta, phi, prediction, ground_truth, r_array,
             rel_error = np.abs(error_field).mean() / (np.abs(gt_field).mean() + 1e-10)
             ax_err.set_title(f'mse={mse:.2e}, rel_error={rel_error:.2%}')
             cbar_err = fig.colorbar(im_err, ax=ax_err, orientation='horizontal',
-                                    fraction=0.046, pad=0.04, format='%.1e')
+                                    fraction=0.046, pad=0.04, format='%.1f')
 
         plt.tight_layout()
         out_file = os.path.join(output_dir, f'epoch_{epoch:04d}_r{r_idx:02d}_rval{r_value:.2f}.png')
