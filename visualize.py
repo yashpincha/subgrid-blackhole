@@ -4,6 +4,7 @@ import numpy as np
 import math
 import cartopy.crs as ccrs
 from data.dataset import SphericalDataset
+import os 
 
 FIELDS = [
     'bcc1', 'bcc2', 'bcc3', 'dens',
@@ -41,10 +42,80 @@ def plot_sphere(theta, phi, data_3d, channel_names,
 
         cbar = fig.colorbar(im, ax=ax,orientation='horizontal',
                     fraction=0.05, pad=0.05, **kwargs)
-        
+
         cbar.set_label(f'{channel_names[c]}')
 
     plt.savefig('all_fields.png', dpi=300)
+
+def plot_predictions(theta, phi, prediction, ground_truth, r_array,
+                                      channel_names, epoch, output_dir='plots',
+                                      radii_stride=8, cmap='viridis'):
+    
+    os.makedirs(output_dir, exist_ok=True)
+    Lon, Lat, proj = return_proj(phi, theta)
+
+    pred_np = prediction.detach().cpu()
+    gt_np = ground_truth.detach().cpu()
+
+    C, R, H, W = pred_np.shape
+    radii_indices = list(range(0, R, radii_stride))
+
+    for r_idx in radii_indices:
+        r_value = r_array[r_idx].item()
+
+        fig = plt.figure(figsize=(24, 32))
+        fig.suptitle(f'epoch {epoch}, radius = {r_value:.2f}')
+
+        for c in range(len(channel_names)):
+
+            pred_field = pred_np[c, r_idx].numpy()
+            gt_field = gt_np[c, r_idx].numpy()
+            error_field = pred_field - gt_field
+
+            vmin = min(pred_field.min(), gt_field.min())
+            vmax = max(pred_field.max(), gt_field.max())
+
+            error_abs_max = np.abs(error_field).max()
+            error_vmin, error_vmax = -error_abs_max, error_abs_max
+
+            ax_pred = fig.add_subplot(8, 3, c*3 + 1, projection=proj)
+            im_pred = ax_pred.pcolormesh(Lon, Lat, pred_field,
+                transform=ccrs.PlateCarree(), cmap=cmap,
+                vmin=vmin, vmax=vmax
+            )
+            ax_pred.set_global()
+            ax_pred.set_title(f'{channel_names[c]} - prediction')
+            cbar_pred = fig.colorbar(im_pred, ax=ax_pred, orientation='horizontal',
+                                     fraction=0.046, pad=0.04, format='%.2e')
+
+            ax_gt = fig.add_subplot(8, 3, c*3 + 2, projection=proj)
+            im_gt = ax_gt.pcolormesh(Lon, Lat, gt_field,
+                transform=ccrs.PlateCarree(), cmap=cmap,
+                vmin=vmin, vmax=vmax
+            )
+            ax_gt.set_global()
+            ax_gt.set_title(f'{channel_names[c]} - ground truth')
+            cbar_gt = fig.colorbar(im_gt, ax=ax_gt, orientation='horizontal',
+                                   fraction=0.046, pad=0.04, format='%.2e')
+
+            ax_err = fig.add_subplot(8, 3, c*3 + 3, projection=proj)
+            im_err = ax_err.pcolormesh(Lon, Lat, error_field,
+                transform=ccrs.PlateCarree(), cmap='RdBu_r',
+                vmin=error_vmin, vmax=error_vmax
+            )
+            ax_err.set_global()
+
+            mse = np.mean(error_field**2)
+            rel_error = np.abs(error_field).mean() / (np.abs(gt_field).mean() + 1e-10)
+            ax_err.set_title(f'{channel_names[c]} - error\nmse={mse:.2e}, rel_error={rel_error:.2%}')
+            cbar_err = fig.colorbar(im_err, ax=ax_err, orientation='horizontal',
+                                    fraction=0.046, pad=0.04, format='%.2e')
+
+        plt.tight_layout()
+        out_file = os.path.join(output_dir, f'epoch_{epoch:04d}_r{r_idx:02d}_rval{r_value:.2f}.png')
+        plt.savefig(out_file, dpi=100, bbox_inches='tight')
+        plt.close(fig)
+        print(f"saved validation plot: {out_file}")
 
 def animate_radius_sweep(theta, phi, data_3d, channel_names, r_array, r_min=0, r_max=63, cmap='twilight_shifted',
                          out_file='radius_sweep.gif', interval=300):
