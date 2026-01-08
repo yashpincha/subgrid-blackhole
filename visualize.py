@@ -4,7 +4,6 @@ import numpy as np
 import math
 import cartopy.crs as ccrs
 from data.dataset import SphericalDataset
-import matplotlib.pyplot as plt
 
 FIELDS = [
     'bcc1', 'bcc2', 'bcc3', 'dens',
