@@ -100,10 +100,8 @@ class Trainer:
             pred_reshaped = first_batch_pred.reshape(C, R, H, W)
             gt_reshaped = first_batch_gt.reshape(C, R, H, W)
 
-            plot_predictions(
-                self.theta, self.phi, pred_reshaped, gt_reshaped,
-                self.r_array, FIELDS, epoch, output_dir=plot_dir
-            )
+            plot_predictions(self.theta, self.phi, pred_reshaped, gt_reshaped,
+                             self.r_array, epoch, output_dir=plot_dir)
 
         return avg_loss
 
