@@ -25,13 +25,12 @@ class Trainer:
 
     def normalize_data(self, batch):
         u_n, u_np1 = batch # each [B, C, R, H, W]
+        u_n = (u_n - self.means) / torch.sqrt(self.vars)
+        u_np1 = (u_np1 - self.means) / torch.sqrt(self.vars)
         
-        u_n = (u_n - self.means.to(u_n.device)) / torch.sqrt(self.vars.to(u_n.device))
-        u_np1 = (u_np1 - self.means.to(u_np1.device)) / torch.sqrt(self.vars.to(u_np1.device))
-        
-        print('post normalization', u_n.shape, u_n.mean())
+        # print('post normalization', u_n.shape, u_n.mean())
         channel_means = u_n.mean(dim=(0, 2, 3, 4))# mean over B, R, H, W
-        print(channel_means)
+        # print(channel_means)
 
         return u_n, u_np1
 
@@ -60,6 +59,7 @@ class Trainer:
             optimizer.step()
             total_loss += loss.item()
         avg_loss = total_loss/len(self.train_data)
+        print('avg_loss is', avg_loss)
         return avg_loss
     
     def validate_epoch(self, model, epoch=0, plot=False, plot_dir='plots'):
@@ -113,12 +113,12 @@ class Trainer:
     
 def train(args):
     # C=8 channels, R=64 radial shells --> C*R=512 channels
-    model = SFNO(img_size=(64, 64), pos_embed='spectral', scale_factor = 4, in_chans=512, out_chans=512, embed_dim=128).to(args.device)
-
+    model = SFNO(img_size=(64, 64), pos_embed='spectral', scale_factor = 10, in_chans=512, out_chans=512, embed_dim=32).to(args.device)
+    print('param count is', sum(p.numel() for p in model.parameters()))
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=args.patience, min_lr=1e-6)
     trainer = Trainer(batch_size=args.batch_size, shuffle=True)
-
+    print('starting training')
     for epoch in range(args.epochs):
         train_loss = trainer.train_epoch(model, optimizer)
 

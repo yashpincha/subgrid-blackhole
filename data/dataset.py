@@ -87,7 +87,7 @@ class SphericalDataset(Dataset):
         vel_r, vel_theta, vel_phi = convert_block(data[VEL_IDXS[0]], data[VEL_IDXS[1]], data[VEL_IDXS[2]])
         spherical_fields.append(torch.stack([vel_r, vel_theta, vel_phi], dim=0))
 
-        return spherical_fields
+        return torch.cat(spherical_fields, dim=0)
 
     def stack_tensor(self, fname):
         with h5py.File(fname, 'r') as f:
