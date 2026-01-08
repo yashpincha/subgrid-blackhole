@@ -4,8 +4,10 @@ import torch
 import h5py
 
 class SphericalDataset(Dataset):
+    
     FIELDS = ['bcc1', 'bcc2', 'bcc3', 'dens', 'eint', 'velx', 'vely', 'velz']
     coords = ['r', 'theta', 'phi']
+
     def __init__(self, pscratch_path, mode='train', train_ratio=0.8, normalize=True):
 
         self.pscratch_path = pscratch_path
@@ -50,6 +52,42 @@ class SphericalDataset(Dataset):
 
     def __len__(self):
         return len(self.files)-1
+    
+    def transform_to_spherical(self, data):
+
+        # TO_CONVERT = ['bcc1', 'bcc2', 'bcc3', 'velx', 'vely', 'velz'] # data has size [C, R, H, W] 
+        # # we want to ingest a list [bcc1, bcc2, bcc3] --> [bcc_r, bcc_theta, bcc_phi] 
+        # # similarly, [velx, vely, velz] --> [vel_r, vel_theta, vel_phi] 
+        # # __getitem__ returns arrays of size [C, R, H, W] for u_n
+        # each field is now size of [R, H, W]
+
+        theta, phi = self.get_coords()[1:] # each of size [H, W]
+        BCC_IDXS = (0, 1, 2)
+        VEL_IDXS = (5, 6, 7)
+
+        def convert_block(field_x, field_y, field_z):
+            field_r = (field_x*torch.sin(theta)*torch.cos(phi) +
+                       field_y*torch.sin(theta)*torch.sin(phi) +
+                       field_z*torch.cos(theta))
+
+            field_theta = (field_x*torch.cos(theta)*torch.cos(phi) +
+                           field_y*torch.cos(theta)*torch.sin(phi) -
+                           field_z*torch.sin(theta))
+
+            field_phi = (-field_x*torch.sin(phi) +
+                         field_y*torch.cos(phi))
+            
+            return field_r, field_theta, field_phi
+
+        spherical_fields = []
+
+        bcc_r, bcc_theta, bcc_phi = convert_block(data[BCC_IDXS[0]], data[BCC_IDXS[1]], data[BCC_IDXS[2]])
+        spherical_fields.append(torch.stack([bcc_r, bcc_theta, bcc_phi], dim=0))
+        spherical_fields.append(data[3:5])  # dens, eint remain unchanged
+        vel_r, vel_theta, vel_phi = convert_block(data[VEL_IDXS[0]], data[VEL_IDXS[1]], data[VEL_IDXS[2]])
+        spherical_fields.append(torch.stack([vel_r, vel_theta, vel_phi], dim=0))
+
+        return spherical_fields
 
     def stack_tensor(self, fname):
         with h5py.File(fname, 'r') as f:
