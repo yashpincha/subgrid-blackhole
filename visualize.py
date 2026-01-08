@@ -10,7 +10,10 @@ FIELDS = [
     'bcc1', 'bcc2', 'bcc3', 'dens',
     'eint', 'velx', 'vely', 'velz'
 ]
-
+PLOT_NAMES = [
+    'bcc_r', 'bcc_theta', 'bcc_phi', 'dens', 
+    'eint', 'vel_r', 'vel_theta', 'vel_phi'
+]
 
 def return_proj(phi, theta):
     # data_3d is a tensor of shape [C, R, H, W]
@@ -48,7 +51,7 @@ def plot_sphere(theta, phi, data_3d, channel_names,
     plt.savefig('all_fields.png', dpi=300)
 
 def plot_predictions(theta, phi, prediction, ground_truth, r_array,
-                                      channel_names, epoch, output_dir='plots',
+                                      plot_names, epoch, output_dir='plots',
                                       radii_stride=8, cmap='viridis'):
     
     os.makedirs(output_dir, exist_ok=True)
@@ -64,9 +67,9 @@ def plot_predictions(theta, phi, prediction, ground_truth, r_array,
         r_value = r_array[r_idx].item()
 
         fig = plt.figure(figsize=(24, 32))
-        fig.suptitle(f'epoch {epoch}, radius = {r_value:.2f}')
+        fig.suptitle(f'epoch {epoch}, radius = {r_value:.2f}', y=1.02)
 
-        for c in range(len(channel_names)):
+        for c in range(len(plot_names)):
 
             pred_field = pred_np[c, r_idx].numpy()
             gt_field = gt_np[c, r_idx].numpy()
@@ -84,9 +87,9 @@ def plot_predictions(theta, phi, prediction, ground_truth, r_array,
                 vmin=vmin, vmax=vmax
             )
             ax_pred.set_global()
-            ax_pred.set_title(f'{channel_names[c]} - prediction')
+            ax_pred.set_title(f'{plot_names[c]} - prediction')
             cbar_pred = fig.colorbar(im_pred, ax=ax_pred, orientation='horizontal',
-                                     fraction=0.046, pad=0.04, format='%.2e')
+                                     fraction=0.046, pad=0.04, format='%.1e')
 
             ax_gt = fig.add_subplot(8, 3, c*3 + 2, projection=proj)
             im_gt = ax_gt.pcolormesh(Lon, Lat, gt_field,
@@ -94,9 +97,9 @@ def plot_predictions(theta, phi, prediction, ground_truth, r_array,
                 vmin=vmin, vmax=vmax
             )
             ax_gt.set_global()
-            ax_gt.set_title(f'{channel_names[c]} - ground truth')
+            ax_gt.set_title(f'{plot_names[c]} - ground truth')
             cbar_gt = fig.colorbar(im_gt, ax=ax_gt, orientation='horizontal',
-                                   fraction=0.046, pad=0.04, format='%.2e')
+                                   fraction=0.046, pad=0.04, format='%.1e')
 
             ax_err = fig.add_subplot(8, 3, c*3 + 3, projection=proj)
             im_err = ax_err.pcolormesh(Lon, Lat, error_field,
@@ -107,9 +110,9 @@ def plot_predictions(theta, phi, prediction, ground_truth, r_array,
 
             mse = np.mean(error_field**2)
             rel_error = np.abs(error_field).mean() / (np.abs(gt_field).mean() + 1e-10)
-            ax_err.set_title(f'{channel_names[c]} - error\nmse={mse:.2e}, rel_error={rel_error:.2%}')
+            ax_err.set_title(f'mse={mse:.2e}, rel_error={rel_error:.2%}')
             cbar_err = fig.colorbar(im_err, ax=ax_err, orientation='horizontal',
-                                    fraction=0.046, pad=0.04, format='%.2e')
+                                    fraction=0.046, pad=0.04, format='%.1e')
 
         plt.tight_layout()
         out_file = os.path.join(output_dir, f'epoch_{epoch:04d}_r{r_idx:02d}_rval{r_value:.2f}.png')
