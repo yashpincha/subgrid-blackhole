@@ -33,7 +33,7 @@ def plot_sphere(theta, phi, data_3d, channel_names,
 
         im = ax.pcolormesh(Lon, Lat, field,
             transform=ccrs.PlateCarree(), cmap=cmap,
-            vmin=vmin,vmax=vmax, shading='auto'
+            vmin=vmin,vmax=vmax
         )
 
         ax.set_global()
@@ -49,8 +49,6 @@ def plot_sphere(theta, phi, data_3d, channel_names,
 
 def animate_radius_sweep(theta, phi, data_3d, channel_names, r_array, r_min=0, r_max=63, cmap='twilight_shifted',
                          out_file='radius_sweep.gif', interval=300):
-
-    # data_3d is a tensor of shape [C, R, H, W]
     Lon, Lat, proj = return_proj(phi, theta)
 
     fig = plt.figure(figsize=(20, 10))
@@ -63,7 +61,6 @@ def animate_radius_sweep(theta, phi, data_3d, channel_names, r_array, r_min=0, r
             im = ax.pcolormesh(
                 Lon, Lat, field, transform=ccrs.PlateCarree(),
                 cmap=cmap,
-                shading='auto'
             )
 
             ax.set_global()
@@ -85,6 +82,72 @@ def animate_radius_sweep(theta, phi, data_3d, channel_names, r_array, r_min=0, r
     anim.save(out_file, writer='pillow')
     plt.close(fig)
 
+def animate_time_sweep(theta, phi, dataset, channel_names, r_val,
+                       t_min, t_max, cmap='twilight_shifted',
+                       out_file='time_sweep.gif', interval=30):
+
+    Lon, Lat, proj = return_proj(phi, theta)
+
+    n_channels = len(channel_names)
+    ncols = 4
+    nrows = int(np.ceil(n_channels / ncols))
+
+    fig = plt.figure(figsize=(20, 10))
+
+    axes = []
+    meshes = []
+    data_3d, _ = dataset[t_min]
+
+    for c in range(n_channels):
+        ax = fig.add_subplot(nrows, ncols, c + 1, projection=proj)
+
+        field = (data_3d[c, r_val].detach().cpu().numpy())
+
+        im = ax.pcolormesh(
+            Lon, Lat, field,
+            transform=ccrs.PlateCarree(),
+            cmap=cmap,
+            shading='auto'
+        )
+
+        ax.set_global()
+        ax.set_title(f'{channel_names[c]}, r_val = {r_val:.2f}')
+
+        cbar = fig.colorbar(
+            im, ax=ax,
+            orientation='horizontal',
+            fraction=0.05,
+            pad=0.05,
+            format='%.3f'
+        )
+        cbar.set_label(channel_names[c])
+
+        axes.append(ax)
+        meshes.append(im)
+
+    def update(t_idx):
+        data_3d, _ = dataset[t_idx]
+
+        for c, im in enumerate(meshes):
+            field = (
+                data_3d[c, r_val].detach().cpu().numpy()
+            )
+            im.set_array(field.ravel())
+
+            axes[c].set_title(
+                f'{channel_names[c]}, t_idx = {t_idx}, r_idx = {r_val:.2f}'
+            )
+
+        print(t_idx / t_max)
+        return meshes
+
+    anim = animation.FuncAnimation(fig,
+        update,frames=range(t_min, t_max + 1),interval=interval,
+        blit=False)
+
+    anim.save(out_file, writer='pillow', dpi=50)
+    plt.close(fig)
+
 if __name__ == '__main__':
     dataset = SphericalDataset('/pscratch/sd/y/ypincha/', 'train', train_ratio=1.0)
     r, theta, phi = dataset.get_coords()
@@ -92,5 +155,7 @@ if __name__ == '__main__':
     # print(type(sample))
     # print(sample, sample.shape)
 
-    plot_sphere(theta,phi,sample,FIELDS, r0=0)
-    animate_radius_sweep(theta,phi, sample, r_array=r, channel_names=FIELDS, cmap='viridis')
+    # plot_sphere(theta,phi,sample,FIELDS, r0=0)
+    # animate_radius_sweep(theta,phi, sample, r_array=r, channel_names=FIELDS, cmap='viridis')
+    print(len(dataset)-1)
+    animate_time_sweep(theta, phi, dataset, channel_names=FIELDS, r_val = 32, t_min=0, t_max=len(dataset)//5)
