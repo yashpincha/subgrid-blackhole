@@ -38,15 +38,16 @@ class Trainer:
 
             B, C, R, H, W = u_n.shape
 
-            u_n = u_n.permute(0, 2, 1, 3, 4).reshape(B*R, C, H, W)
-            u_np1 = u_np1.permute(0, 2, 1, 3, 4).reshape(B*R, C, H, W)
+            # flatten radius into channels: [B, C, R, H, W] -> [B, C*R, H, W]
+            u_n = u_n.reshape(B, C*R, H, W)
+            u_np1 = u_np1.reshape(B, C*R, H, W)
 
             device = next(model.parameters()).device
             u_n = u_n.to(device)
             u_np1 = u_np1.to(device)
 
             optimizer.zero_grad()
-            output = model(u_n) # [B*R, C, H, W]
+            output = model(u_n) # [B, C*R, H, W]
             loss = self.compute_loss(output, u_np1)
             loss.backward()
             optimizer.step()
@@ -62,8 +63,10 @@ class Trainer:
             for batch in self.val_data:
                 u_n, u_np1 = self.normalize_data(batch)
                 B, C, R, H, W = u_n.shape
-                u_n = u_n.permute(0, 2, 1, 3, 4).reshape(B*R, C, H, W)
-                u_np1 = u_np1.permute(0, 2, 1, 3, 4).reshape(B*R, C, H, W)
+
+                # flatten radius into channels: [B, C, R, H, W] -> [B, C*R, H, W]
+                u_n = u_n.reshape(B, C*R, H, W)
+                u_np1 = u_np1.reshape(B, C*R, H, W)
 
                 device = next(model.parameters()).device
                 u_n = u_n.to(device)
@@ -80,8 +83,8 @@ class Trainer:
         return loss_val
     
 def train(args):
-
-    model = SFNO(img_size=(64, 64), pos_embed='spectral', scale_factor = 4, in_chans=8, out_chans=8, embed_dim=64).to(args.device)
+    # C=8 channels, R=64 radial shells --> C*R=512 channels
+    model = SFNO(img_size=(64, 64), pos_embed='spectral', scale_factor = 4, in_chans=512, out_chans=512, embed_dim=64).to(args.device)
 
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=args.patience, min_lr=1e-6)
