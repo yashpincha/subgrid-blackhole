@@ -49,7 +49,7 @@ class SphericalDataset(Dataset):
         return global_mean, global_var
 
     def __len__(self):
-        return len(self.files)
+        return len(self.files)-1
 
     def stack_tensor(self, fname):
         with h5py.File(fname, 'r') as f:
