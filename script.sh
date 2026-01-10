@@ -17,7 +17,9 @@ source ~/.bashrc
 cd /global/homes/y/ypincha/blackholes/subgrid-blackhole
 conda activate bh-sphere
 
+timestamp=$(date +%Y%m%d_%H%M%S)
+
 python train.py --epochs 5 --batch_size 1 \
     --lr 0.001 --patience 3 --plot_freq 2 \
-    --plot_dir "test_plots_${SLURM_JOB_ID}" \
+    --plot_dir "plots_${timestamp}" \
     --device cuda
