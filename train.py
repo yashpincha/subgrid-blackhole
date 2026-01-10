@@ -39,24 +39,20 @@ class Trainer:
 
         for batch in self.train_data:
             u_n, u_np1 = self.normalize_data(batch)
-
-            B, C, R, H, W = u_n.shape
-
-            # flatten radius into channels: [B, C, R, H, W] -> [B, C*R, H, W]
-            u_n = u_n.reshape(B, C*R, H, W)
-            u_np1 = u_np1.reshape(B, C*R, H, W)
+            # flatten radius into channels: [B, C, R, H, W] -> [B, C*R, H, W], already done in __getitem__
 
             device = next(model.parameters()).device
             u_n = u_n.to(device)
             u_np1 = u_np1.to(device)
 
             optimizer.zero_grad()
-            output = model(u_n) # [B, C*R, H, W]
+            output = model(u_n)  # [B, C*R, H, W]
             loss = self.compute_loss(output, u_np1)
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-        avg_loss = total_loss/len(self.train_data)
+
+        avg_loss = total_loss / len(self.train_data)
         print('avg_loss is', avg_loss)
         return avg_loss
     
@@ -66,19 +62,10 @@ class Trainer:
 
         first_batch_pred = None
         first_batch_gt = None
-        original_shape = None
 
         with torch.no_grad():
             for i, batch in enumerate(self.val_data):
                 u_n, u_np1 = self.normalize_data(batch)
-                B, C, R, H, W = u_n.shape
-
-                if i == 0 and plot:
-                    original_shape = (C, R, H, W)
-                # flatten radius into channels: [B, C, R, H, W] -> [B, C*R, H, W]
-                u_n = u_n.reshape(B, C*R, H, W)
-                u_np1 = u_np1.reshape(B, C*R, H, W)
-
                 device = next(model.parameters()).device
                 u_n = u_n.to(device)
                 u_np1 = u_np1.to(device)
@@ -88,15 +75,16 @@ class Trainer:
                 total_loss += loss.item()
 
                 if i == 0 and plot:
-                    first_batch_pred = output[0].cpu()
-                    first_batch_gt = u_np1[0].cpu()
+                    first_batch_pred = output[0].cpu()# [C*R, H, W]
+                    first_batch_gt = u_np1[0].cpu()# [C*R, H, W]
 
         avg_loss = total_loss/len(self.val_data)
 
         if plot and first_batch_pred is not None:
-            C, R, H, W = original_shape
-            pred_reshaped = first_batch_pred.reshape(C, R, H, W)
-            gt_reshaped = first_batch_gt.reshape(C, R, H, W)
+            # reshape for visualization: [C*R, H, W] to [C, R, H, W]
+            C, R = 8, 64
+            pred_reshaped = first_batch_pred.reshape(C, R, first_batch_pred.shape[1], first_batch_pred.shape[2])
+            gt_reshaped = first_batch_gt.reshape(C, R, first_batch_gt.shape[1], first_batch_gt.shape[2])
 
             plot_predictions(self.theta, self.phi, pred_reshaped, gt_reshaped,
                              self.r_array, epoch, output_dir=plot_dir)
