@@ -16,8 +16,6 @@ class Trainer:
         self.val_data = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, pin_memory=True)
         self.means = torch.load('/global/homes/y/ypincha/blackholes/subgrid-blackhole/data/stats.pt')['mean'].reshape(8, 1, 1, 1)
         self.vars = torch.load('/global/homes/y/ypincha/blackholes/subgrid-blackhole/data/stats.pt')['var'].reshape(8, 1, 1, 1)
-
-        # Get coordinates for plotting
         coords = self.val_dataset.get_coords()
         self.r_array = coords[0]
         self.theta = coords[1]
@@ -132,7 +130,7 @@ parser.add_argument('--epochs', type=int, default=500)
 parser.add_argument('--batch_size', type=int, default=2)
 parser.add_argument('--lr', type=float, default=0.001)
 parser.add_argument('--patience', type=int, default=5)
-parser.add_argument('--plot_freq', type=int, default=10)
+parser.add_argument('--plot_freq', type=int, default=1)
 parser.add_argument('--plot_dir', type=str, default='plots')
 parser.add_argument(
     '--device',

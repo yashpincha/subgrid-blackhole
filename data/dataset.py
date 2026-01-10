@@ -56,12 +56,16 @@ class SphericalDataset(Dataset):
     def transform_to_spherical(self, data):
 
         # TO_CONVERT = ['bcc1', 'bcc2', 'bcc3', 'velx', 'vely', 'velz'] # data has size [C, R, H, W] 
-        # # we want to ingest a list [bcc1, bcc2, bcc3] --> [bcc_r, bcc_theta, bcc_phi] 
-        # # similarly, [velx, vely, velz] --> [vel_r, vel_theta, vel_phi] 
-        # # __getitem__ returns arrays of size [C, R, H, W] for u_n
+        # we want to ingest a list [bcc1, bcc2, bcc3] --> [bcc_r, bcc_theta, bcc_phi] 
+        # similarly, [velx, vely, velz] --> [vel_r, vel_theta, vel_phi] 
+        # __getitem__ returns arrays of size [C, R, H, W] for u_n
         # each field is now size of [R, H, W]
-
-        theta, phi = self.get_coords()[1:] # each of size [H, W]
+        coords = self.get_coords()
+        theta_1d = coords[1] # shape [H]
+        phi_1d = coords[2] # shape [W]
+        theta = theta_1d.view(1, -1, 1) # [1,H,1] for broadcasting
+        phi = phi_1d.view(1, 1, -1) # [1,1,W]
+        # print('theta shape', theta.shape, 'phi shape', phi.shape)
         BCC_IDXS = (0, 1, 2)
         VEL_IDXS = (5, 6, 7)
 
