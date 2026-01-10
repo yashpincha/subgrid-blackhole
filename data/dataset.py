@@ -29,36 +29,45 @@ class SphericalDataset(Dataset):
         return self.files
 
     def compute_statistics(self):
-        num_files = len(self.files)
-        num_channels = len(self.FIELDS)
-        means = torch.zeros(num_files, num_channels)
-        variances = torch.zeros(num_files, num_channels)
+        # store per-file, per-channel, per-radius statistics
+        means = []
+        variances = []
+        for fname in self.files:
+            data = self.stack_tensor(fname) # shape [C, R, H, W]
+            data_sph = self.transform_to_spherical(data)
+            # compute mean and variance per channel per radius flatten H, W dimensions
+            C, R, H, W = data_sph.shape
+            mean = data_sph.reshape(C, R, H*W).mean(dim=2) # [C, R]
+            var = data_sph.reshape(C, R, H*W).var(dim=2, unbiased=False) # [C, R]
+            means.append(mean)
+            variances.append(var)
 
-        for i, fname in enumerate(self.files):
-            with h5py.File(fname, 'r') as f:
-                arrays = torch.stack([torch.tensor(f[field][:], dtype=torch.float32)
-                                      for field in self.FIELDS]).view(num_channels, -1)
-                means[i] = arrays.mean(dim=1)
-                variances[i] = arrays.var(dim=1, unbiased=False)
-
+        means = torch.stack(means, dim=0) # [num_files, C, R]
+        variances = torch.stack(variances, dim=0) # [num_files, C, R]
         return means, variances
+
 
     def global_stats(self):
         means, variances = self.compute_statistics()
         global_mean = means.mean(dim=0)
         global_var = (variances + (means - global_mean)**2).mean(dim=0)
         # print(global_mean.shape, global_var.shape)
+        # need to return [C*R] statistics for normalization in train.py
+        # compute_statistics returns [num_files, C] many means and variances
+        # modify compute_statistics to return [num_files, C, R] means and variances
+        # we then consume the mean across num_files dim to get means and vars of shape [C]
+        global_mean = global_mean.reshape(-1) # [C*R]
+        global_var = global_var.reshape(-1) # [C*R]
         return global_mean, global_var
 
     def __len__(self):
         return len(self.files)-1
     
     def transform_to_spherical(self, data):
-
         # TO_CONVERT = ['bcc1', 'bcc2', 'bcc3', 'velx', 'vely', 'velz'] # data has size [C, R, H, W] 
         # we want to ingest a list [bcc1, bcc2, bcc3] --> [bcc_r, bcc_theta, bcc_phi] 
         # similarly, [velx, vely, velz] --> [vel_r, vel_theta, vel_phi] 
-        # __getitem__ returns arrays of size [C, R, H, W] for u_n
+        # stack_tensor returns arrays of size [C, R, H, W] for u_n
         # each field is now size of [R, H, W]
         coords = self.get_coords()
         theta_1d = coords[1] # shape [H]
@@ -113,10 +122,10 @@ class SphericalDataset(Dataset):
             coords_array = torch.stack([torch.tensor(f[coord][:], dtype=torch.float32)
                                       for coord in self.coords])
 
-        return coords_array
+        return coords_array # returns size [3, dim], dim = (64,)
 
 if __name__ == '__main__':
     dataset = SphericalDataset('/pscratch/sd/y/ypincha/', 'train', train_ratio = 1.0)
-    # global_mean, global_var = dataset.global_stats()
-    # stats_dict = {'mean': global_mean, 'var': global_var}
-    # torch.save(stats_dict, f'stats.pt')
+    global_mean, global_var = dataset.global_stats()
+    stats_dict = {'mean': global_mean, 'var': global_var}
+    torch.save(stats_dict, f'stats.pt')

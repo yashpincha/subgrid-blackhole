@@ -14,22 +14,25 @@ class Trainer:
         self.val_dataset = SphericalDataset('/pscratch/sd/y/ypincha/', 'val', train_ratio = 0.8)
         self.train_data = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=shuffle, pin_memory=True)
         self.val_data = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, pin_memory=True)
-        self.means = torch.load('/global/homes/y/ypincha/blackholes/subgrid-blackhole/data/stats.pt')['mean'].reshape(8, 1, 1, 1)
-        self.vars = torch.load('/global/homes/y/ypincha/blackholes/subgrid-blackhole/data/stats.pt')['var'].reshape(8, 1, 1, 1)
+        self.means = torch.load('/global/homes/y/ypincha/blackholes/subgrid-blackhole/data/stats.pt')['mean']
+        self.vars = torch.load('/global/homes/y/ypincha/blackholes/subgrid-blackhole/data/stats.pt')['var']
         coords = self.val_dataset.get_coords()
         self.r_array = coords[0]
         self.theta = coords[1]
         self.phi = coords[2]
 
     def normalize_data(self, batch):
-        u_n, u_np1 = batch # each [B, C, R, H, W]
-        u_n = (u_n - self.means) / torch.sqrt(self.vars)
-        u_np1 = (u_np1 - self.means) / torch.sqrt(self.vars)
-        
-        # print('post normalization', u_n.shape, u_n.mean())
-        channel_means = u_n.mean(dim=(0, 2, 3, 4))# mean over B, R, H, W
-        # print(channel_means)
+        means_exp = self.means.view(1, 8, 64, 1, 1)
+        vars_exp = self.vars.view(1, 8, 64, 1, 1) # [1, C, R, 1, 1]
 
+        u_n = (u_n.reshape(u_n.shape[0], 8, 64, u_n.shape[2], u_n.shape[3])-means_exp)/torch.sqrt(vars_exp)
+        u_np1 = (u_np1.reshape(u_np1.shape[0], 8, 64, u_np1.shape[2], u_np1.shape[3])-means_exp)/torch.sqrt(vars_exp)
+
+        u_n, u_np1 = batch # each [C*R, H, W]
+        u_n = (u_n.reshape(u_n.shape[0], 8, 64, u_n.shape[2], u_n.shape[3])-self.means)/torch.sqrt(self.vars)
+        u_np1 = (u_np1.reshape(u_np1.shape[0], 8, 64, u_np1.shape[2], u_np1.shape[3])-self.means)/torch.sqrt(self.vars)
+
+        # print('post normalization', u_n.shape, u_n.mean())
         return u_n, u_np1
 
 
